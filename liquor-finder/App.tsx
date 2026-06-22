@@ -2,13 +2,19 @@ import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  fetchNearbyLiquorStores,
+  type LiquorStore,
+} from './src/api/places';
 
 export default function App() {
   const [locationMessage, setLocationMessage] = useState('');
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [isLoadingStores, setIsLoadingStores] = useState(false);
+  const [stores, setStores] = useState<LiquorStore[]>([]);
 
   async function handleGetLocation() {
-    setIsLoadingLocation(true);
+    setIsLoadingStores(true);
+    setStores([]);
     setLocationMessage('Requesting location permission...');
 
     try {
@@ -24,13 +30,23 @@ export default function App() {
       const currentLocation = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = currentLocation.coords;
 
+      setLocationMessage('Searching for nearby liquor stores...');
+
+      const nearbyStores = await fetchNearbyLiquorStores({
+        latitude,
+        longitude,
+      });
+
+      setStores(nearbyStores);
       setLocationMessage(
-        `Location found: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+        nearbyStores.length
+          ? 'Nearest liquor stores found.'
+          : 'No nearby liquor stores found.'
       );
     } catch {
-      setLocationMessage('Unable to get your location right now.');
+      setLocationMessage('Unable to find nearby liquor stores right now.');
     } finally {
-      setIsLoadingLocation(false);
+      setIsLoadingStores(false);
     }
   }
 
@@ -41,20 +57,40 @@ export default function App() {
         Finding the nearest bottle, one step at a time.
       </Text>
       <Pressable
-        style={[styles.button, isLoadingLocation && styles.buttonDisabled]}
+        style={[styles.button, isLoadingStores && styles.buttonDisabled]}
         onPress={handleGetLocation}
-        disabled={isLoadingLocation}
+        disabled={isLoadingStores}
       >
         <Text style={styles.buttonText}>
-          {isLoadingLocation ? 'Getting Location...' : 'Get My Location'}
+          {isLoadingStores ? 'Searching...' : 'Get My Location'}
         </Text>
       </Pressable>
       {locationMessage ? (
         <Text style={styles.locationMessage}>{locationMessage}</Text>
       ) : null}
+      {stores.length ? (
+        <View style={styles.storeList}>
+          {stores.map((store) => (
+            <View key={store.id} style={styles.storeItem}>
+              <Text style={styles.storeName}>{store.name}</Text>
+              <Text style={styles.storeDistance}>
+                {formatDistance(store.distanceMeters)} away
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <StatusBar style="auto" />
     </View>
   );
+}
+
+function formatDistance(distanceMeters: number) {
+  if (distanceMeters < 1000) {
+    return `${Math.round(distanceMeters)} m`;
+  }
+
+  return `${(distanceMeters / 1000).toFixed(1)} km`;
 }
 
 const styles = StyleSheet.create({
@@ -97,6 +133,30 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 14,
     color: '#334e68',
+    textAlign: 'center',
+  },
+  storeList: {
+    marginTop: 20,
+    width: '100%',
+    gap: 12,
+  },
+  storeItem: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#d9e2ec',
+    borderRadius: 8,
+    padding: 12,
+  },
+  storeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#102a43',
+    textAlign: 'center',
+  },
+  storeDistance: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#627d98',
     textAlign: 'center',
   },
 });
