@@ -43,8 +43,11 @@ export default function App() {
           ? 'Nearest liquor stores found.'
           : 'No nearby liquor stores found.'
       );
-    } catch {
-      setLocationMessage('Unable to find nearby liquor stores right now.');
+    } catch (error) {
+      console.error(error);
+      setLocationMessage(
+        `Error: ${error instanceof Error ? error.message : String(error)}`
+      );
     } finally {
       setIsLoadingStores(false);
     }
