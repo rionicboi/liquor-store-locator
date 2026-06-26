@@ -1,29 +1,29 @@
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+import Constants from 'expo-constants';
+
+const GOOGLE_PLACES_URL = 'https://places.googleapis.com/v1/places:searchNearby';
 const SEARCH_RADIUS_METERS = 5000;
 const MAX_RESULTS = 3;
 
-type OverpassElement = {
-  type: string;
-  id: number;
-  lat?: number;
-  lon?: number;
-  center?: {
-    lat: number;
-    lon: number;
+type GooglePlace = {
+  id: string;
+  displayName?: {
+    text?: string;
   };
-  tags?: {
-    name?: string;
-    brand?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
   };
 };
 
-type OverpassResponse = {
-  elements: OverpassElement[];
+type GooglePlacesResponse = {
+  places?: GooglePlace[];
 };
 
 export type LiquorStore = {
   id: string;
   name: string;
+  latitude: number;
+  longitude: number;
   distanceMeters: number;
 };
 
@@ -35,23 +35,35 @@ export type Coordinates = {
 export async function fetchNearbyLiquorStores(
   coordinates: Coordinates
 ): Promise<LiquorStore[]> {
-  const query = buildLiquorStoreQuery(coordinates);
-  const response = await fetch(OVERPASS_URL, {
+  const apiKey = getGoogleMapsApiKey();
+  const response = await fetch(GOOGLE_PLACES_URL, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.location',
     },
-    body: `data=${encodeURIComponent(query)}`,
+    body: JSON.stringify({
+      includedTypes: ['liquor_store'],
+      maxResultCount: MAX_RESULTS,
+      rankPreference: 'DISTANCE',
+      locationRestriction: {
+        circle: {
+          center: coordinates,
+          radius: SEARCH_RADIUS_METERS,
+        },
+      },
+    }),
   });
 
   if (!response.ok) {
     throw new Error('Places request failed');
   }
 
-  const data = (await response.json()) as OverpassResponse;
+  const data = (await response.json()) as GooglePlacesResponse;
 
-  return data.elements
-    .map((element) => toLiquorStore(element, coordinates))
+  return (data.places ?? [])
+    .map((place) => toLiquorStore(place, coordinates))
     .filter((store): store is LiquorStore => store !== null)
     .sort((firstStore, secondStore) => {
       return firstStore.distanceMeters - secondStore.distanceMeters;
@@ -59,33 +71,30 @@ export async function fetchNearbyLiquorStores(
     .slice(0, MAX_RESULTS);
 }
 
-function buildLiquorStoreQuery({ latitude, longitude }: Coordinates) {
-  return `
-    [out:json][timeout:25];
-    (
-      node["shop"~"^(alcohol|wine|beverages)$"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-      way["shop"~"^(alcohol|wine|beverages)$"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-      relation["shop"~"^(alcohol|wine|beverages)$"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-    );
-    out center tags;
-  `;
+function getGoogleMapsApiKey() {
+  const apiKey = Constants.expoConfig?.extra?.googleMapsApiKey;
+
+  if (typeof apiKey !== 'string' || !apiKey) {
+    throw new Error('Missing Google Maps API key.');
+  }
+
+  return apiKey;
 }
 
 function toLiquorStore(
-  element: OverpassElement,
+  place: GooglePlace,
   userCoordinates: Coordinates
 ): LiquorStore | null {
-  const latitude = element.lat ?? element.center?.lat;
-  const longitude = element.lon ?? element.center?.lon;
-
-  if (latitude === undefined || longitude === undefined) {
+  if (!place.location) {
     return null;
   }
 
   return {
-    id: `${element.type}-${element.id}`,
-    name: element.tags?.name ?? element.tags?.brand ?? 'Unnamed liquor store',
-    distanceMeters: getDistanceMeters(userCoordinates, { latitude, longitude }),
+    id: place.id,
+    name: place.displayName?.text ?? 'Unnamed liquor store',
+    latitude: place.location.latitude,
+    longitude: place.location.longitude,
+    distanceMeters: getDistanceMeters(userCoordinates, place.location),
   };
 }
 
