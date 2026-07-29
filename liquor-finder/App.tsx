@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+} from 'react-native-safe-area-context';
 import {
   fetchNearbyLiquorStores,
   type LiquorStore,
@@ -54,63 +58,90 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Liquor Finder</Text>
-          <Text style={styles.subtitle}>Find nearby liquor stores</Text>
-        </View>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Liquor Finder</Text>
+            <Text style={styles.subtitle}>Find nearby liquor stores</Text>
+          </View>
 
-        <Pressable
-          style={[styles.button, isLoadingStores && styles.buttonDisabled]}
-          onPress={handleGetLocation}
-          disabled={isLoadingStores}
-        >
-          <Text style={styles.buttonText}>
-            {isLoadingStores ? 'Searching...' : 'Find Nearby Stores'}
-          </Text>
-        </Pressable>
-
-        {locationMessage ? (
-          <Text style={styles.locationMessage}>{locationMessage}</Text>
-        ) : null}
-
-        <View style={styles.resultsSection}>
-          {stores.length ? (
-            <View style={styles.storeList}>
-              {stores.map((store) => (
-                <View key={store.id} style={styles.storeCard}>
-                  <Text style={styles.storeName}>{store.name}</Text>
-
-                  <View style={styles.storeMetaRow}>
-                    <Text style={styles.storeMetaText}>
-                      Rating unavailable
-                    </Text>
-                    <Text style={styles.storeMetaDivider}>|</Text>
-                    <View style={styles.statusRow}>
-                      <View style={styles.statusDotUnknown} />
-                      <Text style={styles.storeMetaText}>
-                        Hours unavailable
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.storeDistance}>
-                    {formatDistance(store.distanceMeters)} away
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : !locationMessage ? (
-            <Text style={styles.placeholderText}>
-              Search to see the nearest liquor stores.
+          <Pressable
+            style={[styles.button, isLoadingStores && styles.buttonDisabled]}
+            onPress={handleGetLocation}
+            disabled={isLoadingStores}
+          >
+            <Text style={styles.buttonText}>
+              {isLoadingStores ? 'Searching...' : 'Find Nearby Stores'}
             </Text>
+          </Pressable>
+
+          {locationMessage ? (
+            <Text style={styles.locationMessage}>{locationMessage}</Text>
           ) : null}
+
+          <View style={styles.resultsSection}>
+            {stores.length ? (
+              <View style={styles.storeList}>
+                {stores.map((store) => (
+                  <View key={store.id} style={styles.storeCard}>
+                    <Text style={styles.storeName}>{store.name}</Text>
+
+                    <View style={styles.storeMetaRow}>
+                      <Text style={styles.storeMetaText}>
+                        {formatRating(store)}
+                      </Text>
+                      <Text style={styles.storeMetaDivider}>•</Text>
+                      <View style={styles.statusRow}>
+                        {store.openNow === undefined ? null : (
+                          <View
+                            style={[
+                              styles.statusDot,
+                              store.openNow
+                                ? styles.statusDotOpen
+                                : styles.statusDotClosed,
+                            ]}
+                          />
+                        )}
+                        <Text style={styles.storeMetaText}>
+                          {formatOpenStatus(store.openNow)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.storeDistance}>
+                      {formatDistance(store.distanceMeters)} away
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : !locationMessage ? (
+              <Text style={styles.placeholderText}>
+                Search to see the nearest liquor stores.
+              </Text>
+            ) : null}
+          </View>
         </View>
-      </View>
-      <StatusBar style="light" />
-    </SafeAreaView>
+        <StatusBar style="light" />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
+}
+
+function formatRating(store: LiquorStore) {
+  if (store.rating === undefined) {
+    return 'Rating unavailable';
+  }
+
+  return `⭐ ${store.rating.toFixed(1)}`;
+}
+
+function formatOpenStatus(openNow: boolean | undefined) {
+  if (openNow === undefined) {
+    return 'Hours unavailable';
+  }
+
+  return openNow ? 'Open' : 'Closed';
 }
 
 function formatDistance(distanceMeters: number) {
@@ -154,7 +185,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderRadius: 14,
@@ -163,7 +194,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonText: {
-    color: '#121212',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',
@@ -189,9 +220,17 @@ const styles = StyleSheet.create({
   },
   storeCard: {
     width: '100%',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#1B1F2A',
     borderRadius: 14,
-    padding: 18,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 3,
   },
   storeName: {
     fontSize: 20,
@@ -218,15 +257,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  statusDotUnknown: {
+  statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#B3B3B3',
+  },
+  statusDotOpen: {
+    backgroundColor: '#22C55E',
+  },
+  statusDotClosed: {
+    backgroundColor: '#EF4444',
   },
   storeDistance: {
     marginTop: 14,
-    fontSize: 15,
-    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#3B82F6',
   },
 });

@@ -6,8 +6,16 @@ const MAX_RESULTS = 3;
 
 type GooglePlace = {
   id: string;
+  rating?: number;
+  userRatingCount?: number;
   displayName?: {
     text?: string;
+  };
+  currentOpeningHours?: {
+    openNow?: boolean;
+  };
+  regularOpeningHours?: {
+    openNow?: boolean;
   };
   location?: {
     latitude: number;
@@ -25,6 +33,9 @@ export type LiquorStore = {
   latitude: number;
   longitude: number;
   distanceMeters: number;
+  rating?: number;
+  userRatingCount?: number;
+  openNow?: boolean;
 };
 
 export type Coordinates = {
@@ -41,7 +52,8 @@ export async function fetchNearbyLiquorStores(
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.location',
+      'X-Goog-FieldMask':
+        'places.id,places.displayName,places.location,places.rating,places.userRatingCount,places.currentOpeningHours.openNow,places.regularOpeningHours.openNow',
     },
     body: JSON.stringify({
       includedTypes: ['liquor_store'],
@@ -95,6 +107,9 @@ function toLiquorStore(
     latitude: place.location.latitude,
     longitude: place.location.longitude,
     distanceMeters: getDistanceMeters(userCoordinates, place.location),
+    rating: place.rating,
+    userRatingCount: place.userRatingCount,
+    openNow: place.currentOpeningHours?.openNow ?? place.regularOpeningHours?.openNow,
   };
 }
 
