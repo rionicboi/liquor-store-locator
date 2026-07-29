@@ -1,4 +1,9 @@
 import { useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import {
+  createNativeStackNavigator,
+  type NativeStackScreenProps,
+} from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -11,7 +16,58 @@ import {
   type LiquorStore,
 } from './src/api/places';
 
+type RootStackParamList = {
+  Home: undefined;
+  Navigation: {
+    store: LiquorStore;
+  };
+};
+
+type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
+type NavigationScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  'Navigation'
+>;
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: '#121212',
+            },
+            headerTintColor: '#FFFFFF',
+            headerShadowVisible: false,
+            contentStyle: {
+              backgroundColor: '#121212',
+            },
+          }}
+        >
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="Navigation"
+            component={NavigationScreen}
+            options={{
+              title: 'Navigation',
+            }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
+  );
+}
+
+function HomeScreen({ navigation }: HomeScreenProps) {
   const [locationMessage, setLocationMessage] = useState('');
   const [isLoadingStores, setIsLoadingStores] = useState(false);
   const [stores, setStores] = useState<LiquorStore[]>([]);
@@ -58,73 +114,124 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Liquor Finder</Text>
-            <Text style={styles.subtitle}>Find nearby liquor stores</Text>
-          </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Liquor Finder</Text>
+          <Text style={styles.subtitle}>Find nearby liquor stores</Text>
+        </View>
 
-          <Pressable
-            style={[styles.button, isLoadingStores && styles.buttonDisabled]}
-            onPress={handleGetLocation}
-            disabled={isLoadingStores}
-          >
-            <Text style={styles.buttonText}>
-              {isLoadingStores ? 'Searching...' : 'Find Nearby Stores'}
-            </Text>
-          </Pressable>
+        <Pressable
+          style={[styles.button, isLoadingStores && styles.buttonDisabled]}
+          onPress={handleGetLocation}
+          disabled={isLoadingStores}
+        >
+          <Text style={styles.buttonText}>
+            {isLoadingStores ? 'Searching...' : 'Find Nearby Stores'}
+          </Text>
+        </Pressable>
 
-          {locationMessage ? (
-            <Text style={styles.locationMessage}>{locationMessage}</Text>
-          ) : null}
+        {locationMessage ? (
+          <Text style={styles.locationMessage}>{locationMessage}</Text>
+        ) : null}
 
-          <View style={styles.resultsSection}>
-            {stores.length ? (
-              <View style={styles.storeList}>
-                {stores.map((store) => (
-                  <View key={store.id} style={styles.storeCard}>
-                    <Text style={styles.storeName}>{store.name}</Text>
+        <View style={styles.resultsSection}>
+          {stores.length ? (
+            <View style={styles.storeList}>
+              {stores.map((store) => (
+                <Pressable
+                  key={store.id}
+                  style={styles.storeCard}
+                  onPress={() => {
+                    navigation.navigate('Navigation', { store });
+                  }}
+                >
+                  <Text style={styles.storeName}>{store.name}</Text>
 
-                    <View style={styles.storeMetaRow}>
-                      <Text style={styles.storeMetaText}>
-                        {formatRating(store)}
-                      </Text>
-                      <Text style={styles.storeMetaDivider}>•</Text>
-                      <View style={styles.statusRow}>
-                        {store.openNow === undefined ? null : (
-                          <View
-                            style={[
-                              styles.statusDot,
-                              store.openNow
-                                ? styles.statusDotOpen
-                                : styles.statusDotClosed,
-                            ]}
-                          />
-                        )}
-                        <Text style={styles.storeMetaText}>
-                          {formatOpenStatus(store.openNow)}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={styles.storeDistance}>
-                      {formatDistance(store.distanceMeters)} away
+                  <View style={styles.storeMetaRow}>
+                    <Text style={styles.storeMetaText}>
+                      {formatRating(store)}
                     </Text>
+                    <Text style={styles.storeMetaDivider}>{'\u2022'}</Text>
+                    <View style={styles.statusRow}>
+                      {store.openNow === undefined ? null : (
+                        <View
+                          style={[
+                            styles.statusDot,
+                            store.openNow
+                              ? styles.statusDotOpen
+                              : styles.statusDotClosed,
+                          ]}
+                        />
+                      )}
+                      <Text style={styles.storeMetaText}>
+                        {formatOpenStatus(store.openNow)}
+                      </Text>
+                    </View>
                   </View>
-                ))}
-              </View>
-            ) : !locationMessage ? (
-              <Text style={styles.placeholderText}>
-                Search to see the nearest liquor stores.
+
+                  <Text style={styles.storeDistance}>
+                    {formatDistance(store.distanceMeters)} away
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : !locationMessage ? (
+            <Text style={styles.placeholderText}>
+              Search to see the nearest liquor stores.
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      <StatusBar style="light" />
+    </SafeAreaView>
+  );
+}
+
+function NavigationScreen({ route }: NavigationScreenProps) {
+  const { store } = route.params;
+
+  return (
+    <SafeAreaView
+      style={styles.container}
+      edges={['bottom', 'left', 'right']}
+    >
+      <View style={styles.navigationContent}>
+        <View style={styles.navigationCard}>
+          <Text style={styles.storeName}>{store.name}</Text>
+          <Text style={styles.storeDistance}>
+            {formatDistance(store.distanceMeters)} away
+          </Text>
+
+          <View style={styles.detailList}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Rating</Text>
+              <Text style={styles.detailValue}>{formatRating(store)}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Status</Text>
+              <Text style={styles.detailValue}>
+                {formatOpenStatus(store.openNow)}
               </Text>
-            ) : null}
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Coordinates</Text>
+              <Text style={styles.detailValue}>
+                {store.latitude.toFixed(5)}, {store.longitude.toFixed(5)}
+              </Text>
+            </View>
           </View>
         </View>
-        <StatusBar style="light" />
-      </SafeAreaView>
-    </SafeAreaProvider>
+
+        <View style={styles.compassSection}>
+          <Text style={styles.compassTitle}>Compass Navigation</Text>
+          <Text style={styles.compassPlaceholder}>
+            Compass direction and bearing guidance will appear here later.
+          </Text>
+        </View>
+      </View>
+      <StatusBar style="light" />
+    </SafeAreaView>
   );
 }
 
@@ -133,7 +240,7 @@ function formatRating(store: LiquorStore) {
     return 'Rating unavailable';
   }
 
-  return `⭐ ${store.rating.toFixed(1)}`;
+  return `\u2B50 ${store.rating.toFixed(1)}`;
 }
 
 function formatOpenStatus(openNow: boolean | undefined) {
@@ -162,6 +269,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: 24,
     paddingTop: 64,
+    paddingBottom: 32,
+  },
+  navigationContent: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    paddingHorizontal: 24,
+    paddingTop: 24,
     paddingBottom: 32,
   },
   header: {
@@ -273,5 +387,52 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#3B82F6',
+  },
+  navigationCard: {
+    width: '100%',
+    backgroundColor: '#1B1F2A',
+    borderRadius: 14,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  detailList: {
+    marginTop: 20,
+    gap: 14,
+  },
+  detailRow: {
+    gap: 4,
+  },
+  detailLabel: {
+    color: '#B3B3B3',
+    fontSize: 13,
+  },
+  detailValue: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  compassSection: {
+    marginTop: 24,
+    backgroundColor: '#1B1F2A',
+    borderRadius: 14,
+    padding: 20,
+  },
+  compassTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  compassPlaceholder: {
+    marginTop: 10,
+    color: '#B3B3B3',
+    fontSize: 15,
+    lineHeight: 22,
   },
 });
