@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import {
   fetchNearbyLiquorStores,
   type LiquorStore,
@@ -54,37 +54,62 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Liquor Locator</Text>
-      <Text style={styles.subtitle}>
-        Finding the nearest bottle, one step at a time.
-      </Text>
-      <Pressable
-        style={[styles.button, isLoadingStores && styles.buttonDisabled]}
-        onPress={handleGetLocation}
-        disabled={isLoadingStores}
-      >
-        <Text style={styles.buttonText}>
-          {isLoadingStores ? 'Searching...' : 'Get My Location'}
-        </Text>
-      </Pressable>
-      {locationMessage ? (
-        <Text style={styles.locationMessage}>{locationMessage}</Text>
-      ) : null}
-      {stores.length ? (
-        <View style={styles.storeList}>
-          {stores.map((store) => (
-            <View key={store.id} style={styles.storeItem}>
-              <Text style={styles.storeName}>{store.name}</Text>
-              <Text style={styles.storeDistance}>
-                {formatDistance(store.distanceMeters)} away
-              </Text>
-            </View>
-          ))}
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Liquor Finder</Text>
+          <Text style={styles.subtitle}>Find nearby liquor stores</Text>
         </View>
-      ) : null}
-      <StatusBar style="auto" />
-    </View>
+
+        <Pressable
+          style={[styles.button, isLoadingStores && styles.buttonDisabled]}
+          onPress={handleGetLocation}
+          disabled={isLoadingStores}
+        >
+          <Text style={styles.buttonText}>
+            {isLoadingStores ? 'Searching...' : 'Find Nearby Stores'}
+          </Text>
+        </Pressable>
+
+        {locationMessage ? (
+          <Text style={styles.locationMessage}>{locationMessage}</Text>
+        ) : null}
+
+        <View style={styles.resultsSection}>
+          {stores.length ? (
+            <View style={styles.storeList}>
+              {stores.map((store) => (
+                <View key={store.id} style={styles.storeCard}>
+                  <Text style={styles.storeName}>{store.name}</Text>
+
+                  <View style={styles.storeMetaRow}>
+                    <Text style={styles.storeMetaText}>
+                      Rating unavailable
+                    </Text>
+                    <Text style={styles.storeMetaDivider}>|</Text>
+                    <View style={styles.statusRow}>
+                      <View style={styles.statusDotUnknown} />
+                      <Text style={styles.storeMetaText}>
+                        Hours unavailable
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.storeDistance}>
+                    {formatDistance(store.distanceMeters)} away
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : !locationMessage ? (
+            <Text style={styles.placeholderText}>
+              Search to see the nearest liquor stores.
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      <StatusBar style="light" />
+    </SafeAreaView>
   );
 }
 
@@ -99,67 +124,109 @@ function formatDistance(distanceMeters: number) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#121212',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'flex-start',
     paddingHorizontal: 24,
+    paddingTop: 64,
+    paddingBottom: 32,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 32,
   },
   title: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '700',
-    color: '#1f2933',
+    color: '#FFFFFF',
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: 12,
+    marginTop: 8,
     fontSize: 16,
-    color: '#52606d',
+    color: '#B3B3B3',
     textAlign: 'center',
   },
   button: {
-    marginTop: 24,
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
+    width: '100%',
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 14,
   },
   buttonDisabled: {
-    backgroundColor: '#93c5fd',
+    opacity: 0.7,
   },
   buttonText: {
-    color: '#fff',
+    color: '#121212',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     textAlign: 'center',
   },
   locationMessage: {
     marginTop: 16,
     fontSize: 14,
-    color: '#334e68',
+    color: '#B3B3B3',
+    textAlign: 'center',
+  },
+  resultsSection: {
+    marginTop: 28,
+  },
+  placeholderText: {
+    color: '#B3B3B3',
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: 'center',
   },
   storeList: {
-    marginTop: 20,
     width: '100%',
-    gap: 12,
+    gap: 14,
   },
-  storeItem: {
+  storeCard: {
     width: '100%',
-    borderWidth: 1,
-    borderColor: '#d9e2ec',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 14,
+    padding: 18,
   },
   storeName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#102a43',
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  storeMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 12,
+  },
+  storeMetaText: {
+    color: '#B3B3B3',
+    fontSize: 14,
+  },
+  storeMetaDivider: {
+    color: '#3A3A3A',
+    fontSize: 14,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDotUnknown: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#B3B3B3',
   },
   storeDistance: {
-    marginTop: 4,
-    fontSize: 14,
-    color: '#627d98',
-    textAlign: 'center',
+    marginTop: 14,
+    fontSize: 15,
+    color: '#FFFFFF',
   },
 });
