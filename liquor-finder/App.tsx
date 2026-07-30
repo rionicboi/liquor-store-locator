@@ -13,13 +13,16 @@ import {
 } from 'react-native-safe-area-context';
 import {
   fetchNearbyLiquorStores,
+  type Coordinates,
   type LiquorStore,
 } from './src/api/places';
+import { calculateBearing } from './src/utils/bearing';
 
 type RootStackParamList = {
   Home: undefined;
   Navigation: {
     store: LiquorStore;
+    userCoordinates: Coordinates;
   };
 };
 
@@ -71,10 +74,14 @@ function HomeScreen({ navigation }: HomeScreenProps) {
   const [locationMessage, setLocationMessage] = useState('');
   const [isLoadingStores, setIsLoadingStores] = useState(false);
   const [stores, setStores] = useState<LiquorStore[]>([]);
+  const [userCoordinates, setUserCoordinates] = useState<Coordinates | null>(
+    null
+  );
 
   async function handleGetLocation() {
     setIsLoadingStores(true);
     setStores([]);
+    setUserCoordinates(null);
     setLocationMessage('Requesting location permission...');
 
     try {
@@ -89,14 +96,16 @@ function HomeScreen({ navigation }: HomeScreenProps) {
 
       const currentLocation = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = currentLocation.coords;
+      const searchCoordinates: Coordinates = {
+        latitude,
+        longitude,
+      };
 
       setLocationMessage('Searching for nearby liquor stores...');
 
-      const nearbyStores = await fetchNearbyLiquorStores({
-        latitude,
-        longitude,
-      });
+      const nearbyStores = await fetchNearbyLiquorStores(searchCoordinates);
 
+      setUserCoordinates(searchCoordinates);
       setStores(nearbyStores);
       setLocationMessage(
         nearbyStores.length
@@ -143,7 +152,14 @@ function HomeScreen({ navigation }: HomeScreenProps) {
                   key={store.id}
                   style={styles.storeCard}
                   onPress={() => {
-                    navigation.navigate('Navigation', { store });
+                    if (!userCoordinates) {
+                      return;
+                    }
+
+                    navigation.navigate('Navigation', {
+                      store,
+                      userCoordinates,
+                    });
                   }}
                 >
                   <Text style={styles.storeName}>{store.name}</Text>
@@ -189,7 +205,13 @@ function HomeScreen({ navigation }: HomeScreenProps) {
 }
 
 function NavigationScreen({ route }: NavigationScreenProps) {
-  const { store } = route.params;
+  const { store, userCoordinates } = route.params;
+  const bearing = calculateBearing(
+    userCoordinates.latitude,
+    userCoordinates.longitude,
+    store.latitude,
+    store.longitude
+  );
 
   return (
     <SafeAreaView
@@ -225,6 +247,10 @@ function NavigationScreen({ route }: NavigationScreenProps) {
 
         <View style={styles.compassSection}>
           <Text style={styles.compassTitle}>Compass Navigation</Text>
+          <View style={styles.bearingBlock}>
+            <Text style={styles.detailLabel}>Bearing</Text>
+            <Text style={styles.bearingValue}>{Math.round(bearing)}°</Text>
+          </View>
           <Text style={styles.compassPlaceholder}>
             Compass direction and bearing guidance will appear here later.
           </Text>
@@ -429,8 +455,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
+  bearingBlock: {
+    marginTop: 18,
+    gap: 4,
+  },
+  bearingValue: {
+    color: '#3B82F6',
+    fontSize: 32,
+    fontWeight: '700',
+  },
   compassPlaceholder: {
-    marginTop: 10,
+    marginTop: 18,
     color: '#B3B3B3',
     fontSize: 15,
     lineHeight: 22,
