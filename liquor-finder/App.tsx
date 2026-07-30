@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import {
   createNativeStackNavigator,
@@ -16,7 +16,7 @@ import {
   type Coordinates,
   type LiquorStore,
 } from './src/api/places';
-import { calculateBearing } from './src/utils/bearing';
+import { calculateBearing, calculateRotation } from './src/utils/bearing';
 
 type RootStackParamList = {
   Home: undefined;
@@ -206,6 +206,27 @@ function HomeScreen({ navigation }: HomeScreenProps) {
 
 function NavigationScreen({ route }: NavigationScreenProps) {
   const { store, userCoordinates } = route.params;
+  const [heading, setHeading] = useState(0);
+  useEffect(() => {
+    let subscription: Location.LocationSubscription | null = null;
+
+    async function startHeading() {
+      subscription = await Location.watchHeadingAsync((headingData) => {
+        const currentHeading =
+          headingData.trueHeading >= 0
+            ? headingData.trueHeading
+            : headingData.magHeading;
+
+        setHeading(currentHeading);
+      });
+    }
+
+    startHeading();
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
   const bearing = calculateBearing(
     userCoordinates.latitude,
     userCoordinates.longitude,
@@ -251,8 +272,12 @@ function NavigationScreen({ route }: NavigationScreenProps) {
             <Text style={styles.detailLabel}>Bearing</Text>
             <Text style={styles.bearingValue}>{Math.round(bearing)}°</Text>
           </View>
+          <View style={styles.bearingBlock}>
+            <Text style={styles.detailLabel}>Heading</Text>
+            <Text style={styles.bearingValue}>{Math.round(heading)}°</Text>
+          </View>
           <Text style={styles.compassPlaceholder}>
-            Compass direction and bearing guidance will appear here later.
+            Nav screen loaded
           </Text>
         </View>
       </View>

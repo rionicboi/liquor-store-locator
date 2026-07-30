@@ -22,6 +22,13 @@ export function calculateBearing(
   return (bearingDegrees + 360) % 360;
 }
 
+export function calculateRotation(bearing: number, heading: number): number {
+  const rotation = bearing - heading;
+
+  // Normalize into -180 <= rotation < 180 so the arrow takes the shortest turn.
+  return ((rotation + 540) % 360) - 180;
+}
+
 function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
