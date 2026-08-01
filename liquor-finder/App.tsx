@@ -17,6 +17,7 @@ import {
   type LiquorStore,
 } from './src/api/places';
 import { calculateBearing, calculateRotation } from './src/utils/bearing';
+import { MaterialIcons } from "@expo/vector-icons";
 
 type RootStackParamList = {
   Home: undefined;
@@ -233,6 +234,7 @@ function NavigationScreen({ route }: NavigationScreenProps) {
     store.latitude,
     store.longitude
   );
+  const rotation = calculateRotation(bearing, heading);
 
   return (
     <SafeAreaView
@@ -268,6 +270,16 @@ function NavigationScreen({ route }: NavigationScreenProps) {
 
         <View style={styles.compassSection}>
           <Text style={styles.compassTitle}>Compass Navigation</Text>
+          <View style={styles.arrowContainer}>
+              <MaterialIcons
+                  name="navigation"
+                  size={90}
+                  color="#3B82F6"
+                  style={{
+                      transform: [{ rotate: `${rotation}deg` }],
+                  }}
+              />
+          </View>
           <View style={styles.bearingBlock}>
             <Text style={styles.detailLabel}>Bearing</Text>
             <Text style={styles.bearingValue}>{Math.round(bearing)}°</Text>
@@ -275,6 +287,12 @@ function NavigationScreen({ route }: NavigationScreenProps) {
           <View style={styles.bearingBlock}>
             <Text style={styles.detailLabel}>Heading</Text>
             <Text style={styles.bearingValue}>{Math.round(heading)}°</Text>
+          </View>
+          <View style={styles.bearingBlock}>
+            <Text style={styles.detailLabel}>Rotation</Text>
+            <Text style={styles.bearingValue}>
+              {Math.round(rotation)}°
+            </Text>
           </View>
           <Text style={styles.compassPlaceholder}>
             Nav screen loaded
@@ -494,5 +512,10 @@ const styles = StyleSheet.create({
     color: '#B3B3B3',
     fontSize: 15,
     lineHeight: 22,
+  },
+  arrowContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 140,
   },
 });
