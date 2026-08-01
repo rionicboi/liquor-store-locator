@@ -16,7 +16,7 @@ import {
   type Coordinates,
   type LiquorStore,
 } from './src/api/places';
-import { calculateBearing, calculateRotation } from './src/utils/bearing';
+import { calculateBearing, calculateRotation, smoothHeading } from './src/utils/bearing';
 import { MaterialIcons } from "@expo/vector-icons";
 
 type RootStackParamList = {
@@ -218,7 +218,7 @@ function NavigationScreen({ route }: NavigationScreenProps) {
             ? headingData.trueHeading
             : headingData.magHeading;
 
-        setHeading(currentHeading);
+      setHeading((previous) => smoothHeading(previous, currentHeading));      
       });
     }
 

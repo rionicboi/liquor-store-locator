@@ -36,3 +36,20 @@ function toRadians(degrees: number): number {
 function toDegrees(radians: number): number {
   return radians * (180 / Math.PI);
 }
+export function smoothHeading(
+  current: number,
+  target: number
+): number {
+  const difference = ((target - current + 540) % 360) - 180;
+  if (Math.abs(difference) < 2) {
+    return current;
+  }
+  let smoothingFactor = 0.20;
+  if (Math.abs(difference) > 15) {
+      smoothingFactor = 0.3;
+  }
+  if (Math.abs(difference) > 45) {
+      smoothingFactor = 0.6;
+  }
+  return (current + difference * smoothingFactor + 360) % 360;
+}
