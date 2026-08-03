@@ -17,6 +17,11 @@ import {
   type LiquorStore,
 } from './src/api/places';
 import { calculateBearing, calculateRotation, smoothHeading } from './src/utils/bearing';
+import { calculateDistance } from './src/utils/distance';
+import {
+  getDistanceStatus,
+  getNavigationInstruction,
+} from './src/utils/navigation';
 import { MaterialIcons } from "@expo/vector-icons";
 
 type RootStackParamList = {
@@ -208,33 +213,76 @@ function HomeScreen({ navigation }: HomeScreenProps) {
 function NavigationScreen({ route }: NavigationScreenProps) {
   const { store, userCoordinates } = route.params;
   const [heading, setHeading] = useState(0);
+  const [currentLocation, setCurrentLocation] = useState(userCoordinates);
+
   useEffect(() => {
-    let subscription: Location.LocationSubscription | null = null;
+    let isActive = true;
+    let headingSubscription: Location.LocationSubscription | null = null;
+    let locationSubscription: Location.LocationSubscription | null = null;
 
     async function startHeading() {
-      subscription = await Location.watchHeadingAsync((headingData) => {
+      headingSubscription = await Location.watchHeadingAsync((headingData) => {
+        if (!isActive) {
+          return;
+        }
+
         const currentHeading =
           headingData.trueHeading >= 0
             ? headingData.trueHeading
             : headingData.magHeading;
 
-      setHeading((previous) => smoothHeading(previous, currentHeading));      
+        setHeading((previous) => smoothHeading(previous, currentHeading));
       });
+
+      if (!isActive) {
+        headingSubscription.remove();
+      }
     }
 
-    startHeading();
+    async function startLocation() {
+      locationSubscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 1_000,
+          distanceInterval: 2,
+        },
+        (location) => {
+          if (!isActive) {
+            return;
+          }
+
+          setCurrentLocation({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          });
+        }
+      );
+
+      if (!isActive) {
+        locationSubscription.remove();
+      }
+    }
+
+    void startHeading().catch((error) => console.error(error));
+    void startLocation().catch((error) => console.error(error));
 
     return () => {
-      subscription?.remove();
+      isActive = false;
+      headingSubscription?.remove();
+      locationSubscription?.remove();
     };
   }, []);
+
   const bearing = calculateBearing(
-    userCoordinates.latitude,
-    userCoordinates.longitude,
+    currentLocation.latitude,
+    currentLocation.longitude,
     store.latitude,
     store.longitude
   );
   const rotation = calculateRotation(bearing, heading);
+  const liveDistance = calculateDistance(currentLocation, store);
+  const distanceStatus = getDistanceStatus(liveDistance);
+  const navigationInstruction = getNavigationInstruction(rotation);
 
   return (
     <SafeAreaView
@@ -245,7 +293,7 @@ function NavigationScreen({ route }: NavigationScreenProps) {
         <View style={styles.navigationCard}>
           <Text style={styles.storeName}>{store.name}</Text>
           <Text style={styles.storeDistance}>
-            {formatDistance(store.distanceMeters)} away
+            {distanceStatus}
           </Text>
 
           <View style={styles.detailList}>
@@ -262,7 +310,7 @@ function NavigationScreen({ route }: NavigationScreenProps) {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Coordinates</Text>
               <Text style={styles.detailValue}>
-                {store.latitude.toFixed(5)}, {store.longitude.toFixed(5)}
+                {currentLocation.latitude.toFixed(5)}, {currentLocation.longitude.toFixed(5)}
               </Text>
             </View>
           </View>
@@ -280,6 +328,9 @@ function NavigationScreen({ route }: NavigationScreenProps) {
                   }}
               />
           </View>
+          <Text style={styles.navigationInstruction}>
+            {navigationInstruction}
+          </Text>
           <View style={styles.bearingBlock}>
             <Text style={styles.detailLabel}>Bearing</Text>
             <Text style={styles.bearingValue}>{Math.round(bearing)}°</Text>
@@ -512,6 +563,12 @@ const styles = StyleSheet.create({
     color: '#B3B3B3',
     fontSize: 15,
     lineHeight: 22,
+  },
+  navigationInstruction: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   arrowContainer: {
     alignItems: 'center',

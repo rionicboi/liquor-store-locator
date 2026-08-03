@@ -1,4 +1,7 @@
 import Constants from 'expo-constants';
+import { calculateDistance, type Coordinates } from '../utils/distance';
+
+export type { Coordinates } from '../utils/distance';
 
 const GOOGLE_PLACES_URL = 'https://places.googleapis.com/v1/places:searchNearby';
 const SEARCH_RADIUS_METERS = 5000;
@@ -36,11 +39,6 @@ export type LiquorStore = {
   rating?: number;
   userRatingCount?: number;
   openNow?: boolean;
-};
-
-export type Coordinates = {
-  latitude: number;
-  longitude: number;
 };
 
 export async function fetchNearbyLiquorStores(
@@ -106,31 +104,9 @@ function toLiquorStore(
     name: place.displayName?.text ?? 'Unnamed liquor store',
     latitude: place.location.latitude,
     longitude: place.location.longitude,
-    distanceMeters: getDistanceMeters(userCoordinates, place.location),
+    distanceMeters: calculateDistance(userCoordinates, place.location),
     rating: place.rating,
     userRatingCount: place.userRatingCount,
     openNow: place.currentOpeningHours?.openNow ?? place.regularOpeningHours?.openNow,
   };
-}
-
-function getDistanceMeters(start: Coordinates, end: Coordinates) {
-  const earthRadiusMeters = 6371000;
-  const startLatitude = toRadians(start.latitude);
-  const endLatitude = toRadians(end.latitude);
-  const latitudeDifference = toRadians(end.latitude - start.latitude);
-  const longitudeDifference = toRadians(end.longitude - start.longitude);
-
-  const a =
-    Math.sin(latitudeDifference / 2) * Math.sin(latitudeDifference / 2) +
-    Math.cos(startLatitude) *
-      Math.cos(endLatitude) *
-      Math.sin(longitudeDifference / 2) *
-      Math.sin(longitudeDifference / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return earthRadiusMeters * c;
-}
-
-function toRadians(degrees: number) {
-  return degrees * (Math.PI / 180);
 }
