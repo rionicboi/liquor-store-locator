@@ -291,62 +291,45 @@ function NavigationScreen({ route }: NavigationScreenProps) {
     >
       <View style={styles.navigationContent}>
         <View style={styles.navigationCard}>
-          <Text style={styles.storeName}>{store.name}</Text>
+          <Text style={styles.navigationStoreName}>{store.name}</Text>
           <Text style={styles.storeDistance}>
             {distanceStatus}
           </Text>
 
-          <View style={styles.detailList}>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Rating</Text>
-              <Text style={styles.detailValue}>{formatRating(store)}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Status</Text>
-              <Text style={styles.detailValue}>
+          <View style={styles.storeMetaRow}>
+            <Text style={styles.storeMetaText}>{formatRating(store)}</Text>
+            <Text style={styles.storeMetaDivider}>{'\u2022'}</Text>
+            <View style={styles.statusRow}>
+              {store.openNow === undefined ? null : (
+                <View
+                  style={[
+                    styles.statusDot,
+                    store.openNow
+                      ? styles.statusDotOpen
+                      : styles.statusDotClosed,
+                  ]}
+                />
+              )}
+              <Text style={styles.storeMetaText}>
                 {formatOpenStatus(store.openNow)}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Coordinates</Text>
-              <Text style={styles.detailValue}>
-                {currentLocation.latitude.toFixed(5)}, {currentLocation.longitude.toFixed(5)}
               </Text>
             </View>
           </View>
         </View>
 
         <View style={styles.compassSection}>
-          <Text style={styles.compassTitle}>Compass Navigation</Text>
           <View style={styles.arrowContainer}>
-              <MaterialIcons
-                  name="navigation"
-                  size={90}
-                  color="#3B82F6"
-                  style={{
-                      transform: [{ rotate: `${rotation}deg` }],
-                  }}
-              />
+            <MaterialIcons
+              name="navigation"
+              size={140}
+              color="#0aeb2c"
+              style={{
+                transform: [{ rotate: `${rotation}deg` }],
+              }}
+            />
           </View>
           <Text style={styles.navigationInstruction}>
             {navigationInstruction}
-          </Text>
-          <View style={styles.bearingBlock}>
-            <Text style={styles.detailLabel}>Bearing</Text>
-            <Text style={styles.bearingValue}>{Math.round(bearing)}°</Text>
-          </View>
-          <View style={styles.bearingBlock}>
-            <Text style={styles.detailLabel}>Heading</Text>
-            <Text style={styles.bearingValue}>{Math.round(heading)}°</Text>
-          </View>
-          <View style={styles.bearingBlock}>
-            <Text style={styles.detailLabel}>Rotation</Text>
-            <Text style={styles.bearingValue}>
-              {Math.round(rotation)}°
-            </Text>
-          </View>
-          <Text style={styles.compassPlaceholder}>
-            Nav screen loaded
           </Text>
         </View>
       </View>
@@ -522,57 +505,30 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 3,
   },
-  detailList: {
-    marginTop: 20,
-    gap: 14,
-  },
-  detailRow: {
-    gap: 4,
-  },
-  detailLabel: {
-    color: '#B3B3B3',
-    fontSize: 13,
-  },
-  detailValue: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   compassSection: {
+    flex: 1,
     marginTop: 24,
     backgroundColor: '#1B1F2A',
     borderRadius: 14,
-    padding: 20,
-  },
-  compassTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  bearingBlock: {
-    marginTop: 18,
-    gap: 4,
-  },
-  bearingValue: {
-    color: '#3B82F6',
-    fontSize: 32,
-    fontWeight: '700',
-  },
-  compassPlaceholder: {
-    marginTop: 18,
-    color: '#B3B3B3',
-    fontSize: 15,
-    lineHeight: 22,
+    padding: 24,
   },
   navigationInstruction: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: '700',
     textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
   },
   arrowContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 140,
+    minHeight: 190,
+  },
+  navigationStoreName: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
